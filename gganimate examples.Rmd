@@ -1,0 +1,117 @@
+---Preparation---
+
+gganimate installing
+```{r}
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("dgrtwo/gganimate")
+#or install.packages('gganimate')
+install.packages("gapminder") #for data use
+```
+ImageMagick installing (In terminal)
+$ cd /usr/local
+$ git reset --hard FETCH_HEAD
+$ brew install imagemagick
+#You may need to install homebrew first... ;)
+
+
+---Simple animation---
+
+Plot the variable lifeExp (life expectancy at birth) by the variable gdpPercap (GDP per capita).
+Make animation by year using the aesthetic frame = year.
+```{r}
+# Load required package
+library(gapminder)
+library(ggplot2)
+library(gganimate)
+# Basic scatter plot
+mapping <- aes(x = gdpPercap, y = lifeExp, 
+               size = pop, color = continent,
+               frame = year) 
+p <- ggplot(gapminder, mapping = mapping) +
+  geom_point() +
+  scale_x_log10()
+p
+# Animate
+gganimate(p, frame = continent) 
+
+#To animate across continent, in mapping use frame = continent.
+#For faster animation use the option interval, for example interval = 0.2
+```
+
+---Save the animation---
+Allowed format: an GIF, video, or an animated webpage.
+```{r}
+gganimate(p, "output.gif")
+gganimate(p, "output.mp4")
+gganimate(p, "output.swf")
+gganimate(p, "output.html")
+```
+System requirement: ffmpeg and ImageMagick drivers should be installed on your computer.
+
+
+---Customization---
+
+Animate some of the plot layers by highlighting particular points:
+```{r}
+p2 <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop)) +
+  geom_point() +
+  geom_point(aes(frame = year), color = "red") +
+  scale_x_log10()
+gganimate(p2)
+```
+
+```{r}
+# Cumulative layer using the aesthetic cumulative = TRUE.
+p3 <- ggplot(gapminder, aes(gdpPercap, lifeExp, frame = year)) +
+  geom_path(aes(cumulative = TRUE, group = country)) +
+  scale_x_log10() +
+  facet_wrap(~continent)
+gganimate(p3)
+```
+
+
+
+```{r}
+## Import packages ##
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(animation)
+library(gganimate)
+ 
+## Function to evaluate Beta pdf for a vector of values ##
+calc_beta = function(alpha, beta){
+  x = seq(0.01, 0.99, 0.01)
+  densityf = dbeta(x, shape = alpha, shape2 = beta)
+  return(data_frame(x, densityf))
+}
+ 
+## Create data frame with evaluation of Beta pdf for different combinations of alpha and beta ##
+alpha = c(0.1, 0.5, 1:5, 10)
+beta = c(0.5, 1, 2, 5)
+ 
+## Create data frame ## 
+# Couldn't get the pipe operator to properly show up in WordPress :-(
+df = expand.grid(alpha = alpha, beta = beta)
+df = group_by(df, alpha, beta) 
+df = unnest(mutate(df, plotdata = map2(alpha, beta, calc_beta)))
+ 
+## Create plot ##
+p = ggplot(df, aes(x = x, y = densityf, colour = factor(alpha), group = factor(alpha))) + 
+  geom_path(aes(frame = alpha, cumulative = TRUE), size = 0.5) +
+  facet_wrap(~beta, 
+             labeller = label_bquote(cols = beta == .(beta))) +
+  ylim(c(0, 6)) +
+  labs(y = expression(paste("f(x; ", alpha, ", ", beta, ")")),
+       title = "Changing parameters in Beta density function") +
+  scale_colour_discrete(name = expression(alpha)) +
+  theme(plot.title = element_text(hjust = 0.5))
+ 
+ani.options(interval = 0.8)
+gganimate(p, title_frame = FALSE, width = 4, height = 4)
+```
+
+Reference:
+http://www.sthda.com/english/articles/16-r-packages/58-gganimate-create-animations-with-ggplot2/
+http://www.ggplot2-exts.org/gganimate.html
